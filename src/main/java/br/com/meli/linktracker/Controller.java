@@ -8,6 +8,9 @@ import java.util.Optional;
 
 import br.com.meli.linktracker.dto.LinkForm;
 import br.com.meli.linktracker.entity.Link;
+import br.com.meli.linktracker.entity.Status;
+import br.com.meli.linktracker.exception.InvalidLinkException;
+import br.com.meli.linktracker.exception.InvalidSenhaException;
 import br.com.meli.linktracker.repository.LinkRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.transaction.Transactional;
 
 
 @RestController
@@ -52,32 +56,58 @@ public class Controller {
     }
 */
     @RequestMapping("/{id}")
-    public RedirectView localRedirect(@PathVariable int id) {
+    @Transactional
+    public RedirectView localRedirect(@PathVariable int id, @RequestParam String senha) {
         Optional<Link> optionalLink = linkRepository.findById(Long.valueOf(id));
 
         if(optionalLink.isPresent()){
-            System.out.println("teste "+optionalLink.get().getUrl());
-            optionalLink.get().setCountRedirect(optionalLink.get().getCountRedirect()+1);
+            Link link = optionalLink.get();
+            if(link.getStatus()== Status.INVALIDO){
+                throw new InvalidLinkException();
+            }
+
+            if(!link.getSenha().equals(senha)){
+                throw new InvalidSenhaException();
+            }
+            link.setCountRedirect(link.getCountRedirect()+1);
+
             //redirectView.setUrl(optionalLink.get().getUrl());
-            RedirectView redirectView = new RedirectView(optionalLink.get().getUrl());
-            System.out.println("teste2 "+redirectView.getUrl());
+            RedirectView redirectView = new RedirectView(link.getUrl(), false);
+
             return redirectView;
         }
         //return ResponseEntity.notFound().build();
         return null;
     }
 
-    @RequestMapping("/teste/{id}")
-    public ResponseEntity<Object> redirectToExternalUrl(@PathVariable int id) throws URISyntaxException {
-        //URI yahoo = new URI("www.yahoo.com");
+    @GetMapping("metrics/{id}")
+    public String getTotal(@PathVariable int id) {
         Optional<Link> optionalLink = linkRepository.findById(Long.valueOf(id));
+
         if(optionalLink.isPresent()) {
-            HttpHeaders httpHeaders = new HttpHeaders();
-            URI yahoo = new URI(optionalLink.get().getUrl());
-            httpHeaders.setLocation(yahoo);
-            return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);
+
+            return "Total de redirecionamentos: " + optionalLink.get().getCountRedirect();
+
         }
-        return ResponseEntity.notFound().build();
+
+        return "Link não cadastrado";
+    }
+
+
+    @RequestMapping("invalidate/{id}")
+    @Transactional
+    public LinkDTO invalido(@PathVariable int id) {
+        Optional<Link> optionalLink = linkRepository.findById(Long.valueOf(id));
+
+        if(optionalLink.isPresent()){
+            Link link = optionalLink.get();
+
+            link.setStatus(Status.INVALIDO);
+
+            return new LinkDTO(link);
+        }
+        //return ResponseEntity.notFound().build();
+        return null;
     }
 
     /*@PostMapping

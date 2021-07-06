@@ -1,9 +1,6 @@
 package br.com.meli.linktracker.entity;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 @Entity
 public class Link {
@@ -12,18 +9,39 @@ public class Link {
     private Long id;
     private String url;
     private int countRedirect;
+    @Enumerated(EnumType.STRING)
+    private Status status;
+    private String senha;
 
     public Link(){
 
     }
 
-    public Link(String url) {
+    public Link(String url, String senha) {
         this.url = url;
         this.countRedirect = 0;
+        this.status = Status.VALIDO;
+        this.senha = senha;
+    }
+
+    public String getSenha() {
+        return senha;
+    }
+
+    public void setSenha(String senha) {
+        this.senha = senha;
     }
 
     public Long getId() {
         return id;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
     }
 
     public void setId(Long id) {
